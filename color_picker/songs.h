@@ -36,5 +36,6 @@ const int tetrisMelody[] = {
 
 const Song TETRIS_SONG = {
   tetrisMelody,
-  sizeof(tetrisMelody) / sizeof(tetrisMelody[0])
+  sizeof(tetrisMelody) / sizeof(tetrisMelody[0]),
+  144
 };

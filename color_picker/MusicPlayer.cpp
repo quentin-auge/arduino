@@ -4,6 +4,7 @@ MusicPlayer::MusicPlayer(int buzzerPin)
   : _buzzerPin(buzzerPin),
     _melody(nullptr),
     _noteCount(0),
+    _tempo(0),
     _noteIndex(0),
     _noteStartMs(0),
     _noteDurationMs(0),
@@ -18,35 +19,13 @@ void MusicPlayer::play(const Song& song) {
 
   _melody    = song.melody;
   _noteCount = song.length / 2;
+  _tempo     = song.tempo;
   _noteIndex = 0;
 
   _noteToneActive = false;
   _active         = true;
   _paused         = false;
   _finished       = false;
-}
-
-void MusicPlayer::stop() {
-  noTone(_buzzerPin);
-  _active         = false;
-  _paused         = false;
-  _finished       = false;
-  _noteToneActive = false;
-}
-
-
-void MusicPlayer::pause() {
-  if (!_active || _paused) return;
-  noTone(_buzzerPin);
-  _paused         = true;
-  _noteToneActive = false;
-}
-
-void MusicPlayer::resume() {
-  if (!_active || !_paused) return;
-  _paused       = true;
-  _noteStartMs  = millis();  // reset the note timer so the note replays fully
-  _paused       = false;
 }
 
 bool MusicPlayer::update() {
@@ -77,13 +56,39 @@ bool MusicPlayer::update() {
   return true;
 }
 
+void MusicPlayer::stop() {
+  noTone(_buzzerPin);
+  _active         = false;
+  _paused         = false;
+  _finished       = false;
+  _noteToneActive = false;
+}
+
+
+void MusicPlayer::pause() {
+  if (!_active || _paused) return;
+  noTone(_buzzerPin);
+  _paused         = true;
+  _noteToneActive = false;
+}
+
+void MusicPlayer::resume() {
+  if (!_active || !_paused) return;
+  _paused       = true;
+  _noteStartMs  = millis();  // reset the note timer so the note replays fully
+  _paused       = false;
+}
+
+void MusicPlayer::setTempo(int tempo) {
+  _tempo = tempo;
+}
+
 bool MusicPlayer::isPlaying()  const { return _active && !_paused && !_finished; }
 bool MusicPlayer::isPaused()   const { return _paused; }
 bool MusicPlayer::isFinished() const { return _finished; }
 
 void MusicPlayer::_startNote() {
-  int tempo     = 300;
-  int wholenote = (60000 * 4) / tempo;   // duration of a whole note in ms
+  int wholenote = (60000 * 4) / _tempo;   // duration of a whole note in ms
 
   int divider = _melody[_noteIndex + 1];
 

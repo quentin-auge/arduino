@@ -39,12 +39,13 @@ void setup() {
 }
 
 int previousButtonBackState = HIGH;
+Song song = TETRIS_SONG;
 
 void loop() {
   int currentButtonBackState = digitalRead(BUTTON_BACK_PIN);
   if (previousButtonBackState == HIGH && currentButtonBackState == LOW) {
     if (!player.isPlaying())
-      player.play(TETRIS_SONG);
+      player.play(song);
     else
       player.stop();
   }
@@ -52,6 +53,9 @@ void loop() {
 
   if (!player.isFinished())
   {
+    int potentiometerValue = analogRead(POTENTIOMETER_PIN);
+    int tempo = map(potentiometerValue, 0, 4095, song.tempo / 2, song.tempo * 2);
+    player.setTempo(tempo);
     player.update();
   }
 
