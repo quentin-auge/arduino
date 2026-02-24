@@ -38,18 +38,63 @@ void setup() {
   Serial.println("Connection established!");
 }
 
+#define SHORT_PRESS_TIME 500
+
 int previousButtonBackState = HIGH;
-Song song = TETRIS_SONG;
+int currentButtonBackState;
+int buttonBackPressedTime = 0;
+int buttonBackReleasedTime = 0;
+
+int song_idx = 0;
+Song song = ALL_SONGS[song_idx];
+
+bool wasPlaying = false;
 
 void loop() {
-  int currentButtonBackState = digitalRead(BUTTON_BACK_PIN);
+  Serial.println(NB_SONGS);
+
+  // Detect short / long press on back button
+
+  bool buttonBackPress = false;
+  bool buttonBackShortPress = false;
+  bool buttonBackLongPress = false;
+
+  currentButtonBackState = digitalRead(BUTTON_BACK_PIN);
+  
   if (previousButtonBackState == HIGH && currentButtonBackState == LOW) {
-    if (!player.isPlaying())
-      player.play(song);
-    else
-      player.stop();
+    buttonBackPressedTime = millis();
+    buttonBackPress = true;
   }
+
+  if (previousButtonBackState == LOW && currentButtonBackState == HIGH) {
+    buttonBackReleasedTime = millis();
+
+    if (buttonBackReleasedTime - buttonBackPressedTime < SHORT_PRESS_TIME)
+      buttonBackShortPress = true;
+    else
+      buttonBackLongPress = true;
+  }
+
   previousButtonBackState = currentButtonBackState;
+
+  // Handle presses on back button
+
+  if (buttonBackPress) {
+    wasPlaying = player.isPlaying();
+    player.stop();
+  }
+
+  if (buttonBackShortPress) {
+    if (!wasPlaying)
+      player.play(ALL_SONGS[song_idx]);
+  }
+
+  if (buttonBackLongPress) {
+    song_idx = (song_idx + 1) % NB_SONGS;
+    song = ALL_SONGS[song_idx];
+    player.play(song);
+  }
+
 
   if (!player.isFinished())
   {
