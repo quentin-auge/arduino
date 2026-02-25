@@ -113,7 +113,7 @@ void loop() {
   {
     // Handle tempo tuning with potentiometer
     int potentiometerValue = analogRead(POTENTIOMETER_PIN);
-    int tempo = map(potentiometerValue, 0, 4095, song.tempo / 2, song.tempo * 2);
+    int tempo = map(4095 - potentiometerValue, 0, 4095, song.tempo / 2, song.tempo * 2);
     player.setTempo(tempo);
     player.update();
     setRGBFromPitch(player.getPitch());
