@@ -53,19 +53,21 @@ void loop() {
 
   if (backButton.isPressed()) {
     wasPlaying = player.isPlaying();
-    player.stop();
-    setRGBFromPitch(REST);
+    if (player.isPlaying()) {
+      player.stop();
+      setRGBFromPitch(REST);
+    }
   }
 
-  if (backButton.isShortPress()) {
-    if (!wasPlaying)
+  if (backButton.isReleased()) {
+    if (player.isStopped() && !wasPlaying) {
       player.play(ALL_SONGS[song_idx]);
+    }
   }
 
-  if (backButton.isLongPress()) {
+  if (backButton.isMultiClick()) {
     song_idx = (song_idx + 1) % NB_SONGS;
-    song = ALL_SONGS[song_idx];
-    player.play(song);
+    player.play(ALL_SONGS[song_idx]);
   }
 
   if (player.isPlaying())

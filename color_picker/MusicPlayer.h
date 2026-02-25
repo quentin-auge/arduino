@@ -18,8 +18,9 @@ public:
 
   void setTempo(int tempo);
 
-  bool isPlaying() const;
-  bool isPaused()  const;
+  bool isPlaying()  const;
+  bool isPaused()   const;
+  bool isStopped()  const;
   bool isFinished() const;
 
   int getPitch() const;

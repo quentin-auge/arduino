@@ -85,6 +85,7 @@ void MusicPlayer::setTempo(int tempo) {
 
 bool MusicPlayer::isPlaying()  const { return _active && !_paused && !_finished; }
 bool MusicPlayer::isPaused()   const { return _paused; }
+bool MusicPlayer::isStopped()  const { return !_active;}
 bool MusicPlayer::isFinished() const { return _finished; }
 int MusicPlayer::getPitch()    const { return _melody[_noteIndex]; }
 
