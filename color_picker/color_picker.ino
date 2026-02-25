@@ -38,12 +38,17 @@ void setup() {
   Serial.println("Connection established!");
 }
 
+#define DEBOUNCE_MS 50
+
+int lastRawButtonBackState;
+unsigned long lastDebounceButtonBackTime = 0;
+
 #define SHORT_PRESS_TIME 500
 
 int previousButtonBackState = HIGH;
 int currentButtonBackState;
-int buttonBackPressedTime = 0;
-int buttonBackReleasedTime = 0;
+unsigned long buttonBackPressedTime = 0;
+unsigned long buttonBackReleasedTime = 0;
 
 int song_idx = 0;
 Song song = ALL_SONGS[song_idx];
@@ -57,23 +62,33 @@ void loop() {
   bool buttonBackShortPress = false;
   bool buttonBackLongPress = false;
 
-  currentButtonBackState = digitalRead(BUTTON_BACK_PIN);
+  int rawButtonBackState = digitalRead(BUTTON_BACK_PIN);
   
-  if (previousButtonBackState == HIGH && currentButtonBackState == LOW) {
-    buttonBackPressedTime = millis();
-    buttonBackPress = true;
+  if (rawButtonBackState != lastRawButtonBackState) {
+    lastDebounceButtonBackTime = millis();  // Debounce filter
   }
 
-  if (previousButtonBackState == LOW && currentButtonBackState == HIGH) {
-    buttonBackReleasedTime = millis();
+  if (millis() - lastDebounceButtonBackTime >= DEBOUNCE_MS) {
+    currentButtonBackState = rawButtonBackState;  // Stable, accept it
+  
+    if (previousButtonBackState == HIGH && currentButtonBackState == LOW) {
+      buttonBackPressedTime = millis();
+      buttonBackPress = true;
+    }
 
-    if (buttonBackReleasedTime - buttonBackPressedTime < SHORT_PRESS_TIME)
-      buttonBackShortPress = true;
-    else
-      buttonBackLongPress = true;
+    if (previousButtonBackState == LOW && currentButtonBackState == HIGH) {
+      buttonBackReleasedTime = millis();
+
+      if (buttonBackReleasedTime - buttonBackPressedTime < SHORT_PRESS_TIME)
+        buttonBackShortPress = true;
+      else
+        buttonBackLongPress = true;
+    }
+
+    previousButtonBackState = currentButtonBackState;
   }
 
-  previousButtonBackState = currentButtonBackState;
+  lastRawButtonBackState = rawButtonBackState;
 
   // Handle presses on back button
 
@@ -96,6 +111,7 @@ void loop() {
 
   if (player.isPlaying())
   {
+    // Handle tempo tuning with potentiometer
     int potentiometerValue = analogRead(POTENTIOMETER_PIN);
     int tempo = map(potentiometerValue, 0, 4095, song.tempo / 2, song.tempo * 2);
     player.setTempo(tempo);
@@ -104,6 +120,8 @@ void loop() {
   }
   else
   {
+    // Handle pressed on RGB buttons
+
     int r = digitalRead(BUTTON_R_PIN) == LOW ? 255 : 0;
     analogWrite(LED_R_PIN, r);
 
