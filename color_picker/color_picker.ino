@@ -1,4 +1,5 @@
 #include "MusicPlayer.h"
+#include "Button.h"
 #include "songs.h"
 
 #define POTENTIOMETER_PIN 0
@@ -38,72 +39,30 @@ void setup() {
   Serial.println("Connection established!");
 }
 
-#define DEBOUNCE_MS 50
-
-int lastRawButtonBackState;
-unsigned long lastDebounceButtonBackTime = 0;
-
-#define SHORT_PRESS_TIME 500
-
-int previousButtonBackState = HIGH;
-int currentButtonBackState;
-unsigned long buttonBackPressedTime = 0;
-unsigned long buttonBackReleasedTime = 0;
-
 int song_idx = 0;
 Song song = ALL_SONGS[song_idx];
 
 bool wasPlaying = false;
 
+Button backButton(BUTTON_BACK_PIN);
+
 void loop() {
-  // Detect short / long press on back button
+  // Handle back button
 
-  bool buttonBackPress = false;
-  bool buttonBackShortPress = false;
-  bool buttonBackLongPress = false;
+  backButton.update();
 
-  int rawButtonBackState = digitalRead(BUTTON_BACK_PIN);
-  
-  if (rawButtonBackState != lastRawButtonBackState) {
-    lastDebounceButtonBackTime = millis();  // Debounce filter
-  }
-
-  if (millis() - lastDebounceButtonBackTime >= DEBOUNCE_MS) {
-    currentButtonBackState = rawButtonBackState;  // Stable, accept it
-  
-    if (previousButtonBackState == HIGH && currentButtonBackState == LOW) {
-      buttonBackPressedTime = millis();
-      buttonBackPress = true;
-    }
-
-    if (previousButtonBackState == LOW && currentButtonBackState == HIGH) {
-      buttonBackReleasedTime = millis();
-
-      if (buttonBackReleasedTime - buttonBackPressedTime < SHORT_PRESS_TIME)
-        buttonBackShortPress = true;
-      else
-        buttonBackLongPress = true;
-    }
-
-    previousButtonBackState = currentButtonBackState;
-  }
-
-  lastRawButtonBackState = rawButtonBackState;
-
-  // Handle presses on back button
-
-  if (buttonBackPress) {
+  if (backButton.isPressed()) {
     wasPlaying = player.isPlaying();
     player.stop();
     setRGBFromPitch(REST);
   }
 
-  if (buttonBackShortPress) {
+  if (backButton.isShortPress()) {
     if (!wasPlaying)
       player.play(ALL_SONGS[song_idx]);
   }
 
-  if (buttonBackLongPress) {
+  if (backButton.isLongPress()) {
     song_idx = (song_idx + 1) % NB_SONGS;
     song = ALL_SONGS[song_idx];
     player.play(song);
@@ -121,7 +80,6 @@ void loop() {
   else
   {
     // Handle pressed on RGB buttons
-
     int r = digitalRead(BUTTON_R_PIN) == LOW ? 255 : 0;
     analogWrite(LED_R_PIN, r);
 
