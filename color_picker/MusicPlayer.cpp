@@ -86,6 +86,7 @@ void MusicPlayer::setTempo(int tempo) {
 bool MusicPlayer::isPlaying()  const { return _active && !_paused && !_finished; }
 bool MusicPlayer::isPaused()   const { return _paused; }
 bool MusicPlayer::isFinished() const { return _finished; }
+int MusicPlayer::getPitch()    const { return _melody[_noteIndex]; }
 
 void MusicPlayer::_startNote() {
   int wholenote = (60000 * 4) / _tempo;   // duration of a whole note in ms

@@ -22,6 +22,8 @@ public:
   bool isPaused()  const;
   bool isFinished() const;
 
+  int getPitch() const;
+
 private:
   int _buzzerPin;
 
