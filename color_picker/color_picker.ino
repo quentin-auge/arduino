@@ -2,15 +2,18 @@
 #include "MusicPlayer.h"
 #include "songs.h"
 #include "Button.h"
+#include "LedController.h"
 #include "leds.h"
-
-MusicPlayer player(BUZZER_PIN);
 
 Button rButton(BUTTON_R_PIN);
 Button gButton(BUTTON_G_PIN);
 Button bButton(BUTTON_B_PIN);
+LedController rLed;
+LedController gLed;
+LedController bLed;
 
 Button backButton(BUTTON_BACK_PIN);
+MusicPlayer player(BUZZER_PIN);
 
 void setup() {
   Serial.begin(9600);
@@ -37,32 +40,6 @@ int song_idx = 0;
 Song song = ALL_SONGS[song_idx];
 
 bool wasPlaying = false;
-
-int r;
-int g;
-int b;
-
-bool rTuning = false;
-bool gTuning = false;
-bool bTuning = false;
-
-bool rBlink = false;
-unsigned long rBlinkTime = 0;
-int rBlinkBrightness;
-bool rBlinkTuning = false;
-int rBlinkInterval = 0;
-
-bool gBlink = false;
-unsigned long gBlinkTime = 0;
-int gBlinkBrightness;
-bool gBlinkTuning = false;
-int gBlinkInterval = 0;
-
-bool bBlink = false;
-unsigned long bBlinkTime = 0;
-int bBlinkBrightness;
-bool bBlinkTuning = false;
-int bBlinkInterval = 0;
 
 void loop() {
   int potentiometerValue = 4095 - analogRead(POTENTIOMETER_PIN);
@@ -107,107 +84,24 @@ void loop() {
     gButton.update();
     bButton.update();
 
-    // Handle forced LEDs
+    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isMultiClick(), potentiometerValue);
+    analogWrite(LED_R_PIN, rBrightness);
+    
+    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isMultiClick(), potentiometerValue);
+    analogWrite(LED_G_PIN, gBrightness);
+    
+    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isMultiClick(), potentiometerValue);
+    analogWrite(LED_B_PIN, bBrightness);
 
-    if (rButton.isShortPress()) {
-      r = forceLed(LED_R_PIN, r);
-      rTuning = false; gTuning = false; bTuning = false;
-      rBlink = false;
-      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
+    // When one led takes over tuning, clear the others
+    if (rButton.isShortPress(), rButton.isLongPress() || rButton.isMultiClick()) {
+      gLed.exitTuning(); bLed.exitTuning();
     }
-
-    if (gButton.isShortPress()) {
-      g = forceLed(LED_G_PIN, g);
-      rTuning = false; gTuning = false; bTuning = false;
-      gBlink = false;
-      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
+    if (gButton.isShortPress() || gButton.isLongPress() || gButton.isMultiClick()) {
+      rLed.exitTuning(); bLed.exitTuning();
     }
-
-    if (bButton.isShortPress()) {
-      b = forceLed(LED_B_PIN, b);
-      rTuning = false; gTuning = false; bTuning = false;
-      bBlink = false;
-      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
+    if (bButton.isShortPress() || bButton.isLongPress() || bButton.isMultiClick()) {
+      rLed.exitTuning(); gLed.exitTuning();
     }
-
-    // Handle tuned LEDs
-
-    if (rButton.isLongPress()) {
-      blipLed(LED_R_PIN, r);
-      rTuning = true; gTuning = false; bTuning = false;
-      rBlink = false;
-      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
-    }
-
-    if (gButton.isLongPress()) {
-      blipLed(LED_G_PIN, g);
-      rTuning = false; gTuning = true; bTuning = false;
-      gBlink = false;
-      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
-    }
-
-    if (bButton.isLongPress()) {
-      blipLed(LED_B_PIN, b);
-      rTuning = false; gTuning = false; bTuning = true;
-      bBlink = false;
-      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
-    }
-
-    int tunedBrightness = map(potentiometerValue, 0, 4095, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
-    if (rTuning) r = tunedBrightness;
-    if (gTuning) g = tunedBrightness;
-    if (bTuning) b = tunedBrightness;
-
-    // Handle blinking
-
-    if (rButton.isDoubleClick()) {
-      rBlink = !rBlink;
-      rBlinkTime = millis();
-      rBlinkBrightness = r;
-      rBlinkTuning = true; gBlinkTuning = false; bBlinkTuning = false;
-      rTuning = false; gTuning = false; bTuning = false;
-    }
-
-    if (gButton.isDoubleClick()) {
-      gBlink = !gBlink;
-      gBlinkTime = millis();
-      gBlinkBrightness = g;
-      rBlinkTuning = false; gBlinkTuning = true; bBlinkTuning = false;
-      gTuning = false; gTuning = false; bTuning = false;
-    }
-
-    if (bButton.isDoubleClick()) {
-      bBlink = !bBlink;
-      bBlinkTime = millis();
-      bBlinkBrightness = b;
-      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = true;
-      bTuning = false; gTuning = false; bTuning = false;
-    }
-
-    int tunedBlinkInterval = map(4095 - potentiometerValue, 0, 4095, 100, 1000);
-    if (rBlinkTuning) rBlinkInterval = tunedBlinkInterval;
-    if (gBlinkTuning) gBlinkInterval = tunedBlinkInterval;
-    if (bBlinkTuning) bBlinkInterval = tunedBlinkInterval;
-
-    if (rBlink && millis() - rBlinkTime > rBlinkInterval) {
-      r = r == 0 ? rBlinkBrightness : 0;
-      rBlinkTime = millis();
-    }
-
-    if (gBlink && millis() - gBlinkTime > gBlinkInterval) {
-      g = g == 0 ? gBlinkBrightness : 0;
-      gBlinkTime = millis();
-    }
-
-    if (bBlink && millis() - bBlinkTime > bBlinkInterval) {
-      b = b == 0 ? bBlinkBrightness : 0;
-      bBlinkTime = millis();
-    }
-
-    // Apply
-
-    analogWrite(LED_R_PIN, r);
-    analogWrite(LED_G_PIN, g);
-    analogWrite(LED_B_PIN, b);
   }
 }

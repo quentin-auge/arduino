@@ -2,20 +2,6 @@
 #include "pins.h"
 #include "pitches.h"
 
-#define BLIP_DURATION 300
-
-int forceLed(int ledPin, int currentBrightness) {
-  int newBrightness = currentBrightness < 128 ? MAX_BRIGHTNESS : 0;
-  analogWrite(ledPin, newBrightness);
-  return newBrightness;
-}
-
-void blipLed(int ledPin, int currentBrightness) {
-  forceLed(ledPin, currentBrightness);
-  delay(BLIP_DURATION);
-  analogWrite(ledPin, currentBrightness);
-}
-
 void setRGBFromPitch(int pitch) {
   if (pitch == REST) {
     analogWrite(LED_R_PIN, 0);
