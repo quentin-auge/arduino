@@ -1,22 +1,16 @@
+#include "pins.h"
 #include "MusicPlayer.h"
-#include "Button.h"
 #include "songs.h"
-
-#define POTENTIOMETER_PIN 0
-
-#define LED_G_PIN 1
-#define LED_R_PIN 3
-#define LED_B_PIN 10
-
-#define BUZZER_PIN 21
-
-#define BUTTON_R_PIN 6
-#define BUTTON_G_PIN 7
-#define BUTTON_B_PIN 5
-
-#define BUTTON_BACK_PIN 20
+#include "Button.h"
+#include "leds.h"
 
 MusicPlayer player(BUZZER_PIN);
+
+Button rButton(BUTTON_R_PIN);
+Button gButton(BUTTON_G_PIN);
+Button bButton(BUTTON_B_PIN);
+
+Button backButton(BUTTON_BACK_PIN);
 
 void setup() {
   Serial.begin(9600);
@@ -44,7 +38,13 @@ Song song = ALL_SONGS[song_idx];
 
 bool wasPlaying = false;
 
-Button backButton(BUTTON_BACK_PIN);
+int r;
+int g;
+int b;
+
+bool rTuning = false;
+bool gTuning = false;
+bool bTuning = false;
 
 void loop() {
   // Handle back button
@@ -79,45 +79,60 @@ void loop() {
     player.update();
     setRGBFromPitch(player.getPitch());
   }
-  else
+  
+  if (!player.isPlaying())
   {
-    // Handle pressed on RGB buttons
-    int r = digitalRead(BUTTON_R_PIN) == LOW ? 255 : 0;
+    // Handled RGB LEDs / buttons
+
+    rButton.update();
+    gButton.update();
+    bButton.update();
+
+    // Handle forced LEDs
+
+    if (rButton.isShortPress()) {
+      r = forceLed(LED_R_PIN, r);
+      rTuning = false; gTuning = false; bTuning = false;
+    }
+
+    if (gButton.isShortPress()) {
+      g = forceLed(LED_G_PIN, g);
+      rTuning = false; gTuning = false; bTuning = false;
+    }
+
+    if (bButton.isShortPress()) {
+      b = forceLed(LED_B_PIN, b);
+      rTuning = false; gTuning = false; bTuning = false;
+    }
+
+    // Handle tuned LEDs
+
+    int potentiometerValue = analogRead(POTENTIOMETER_PIN);
+    int tunedBrightness = map(4095 - potentiometerValue, 0, 4095, 0, 255);
+
+    if (rButton.isLongPress()) {
+      blipLed(LED_R_PIN, r);
+      rTuning = true; gTuning = false; bTuning = false;
+    }
+
+    if (gButton.isLongPress()) {
+      blipLed(LED_G_PIN, g);
+      rTuning = false; gTuning = true; bTuning = false;
+    }
+
+    if (bButton.isLongPress()) {
+      blipLed(LED_B_PIN, b);
+      rTuning = false; gTuning = false; bTuning = true;
+    }
+
+    if (rTuning) r = tunedBrightness;
+    if (gTuning) g = tunedBrightness;
+    if (bTuning) b = tunedBrightness;
+
+    // Apply
+
     analogWrite(LED_R_PIN, r);
-
-    int g = digitalRead(BUTTON_G_PIN) == LOW ? 255 : 0;
     analogWrite(LED_G_PIN, g);
-
-    int b = digitalRead(BUTTON_B_PIN) == LOW ? 255 : 0;
     analogWrite(LED_B_PIN, b);
   }
-}
-
-void setRGBFromPitch(int pitch) {
-  if (pitch == REST) {
-    analogWrite(LED_R_PIN, 0);
-    analogWrite(LED_G_PIN, 0);
-    analogWrite(LED_B_PIN, 0);
-    return;
-  }
-
-  // Constrain the range to avoid glitchy colors
-  // 131Hz (C3) to 1047Hz (C6) covers most melodies
-  int hue = map(constrain(pitch, 131, 1047), 131, 1047, 0, 255);
-  
-  // Hue -> RGB
-  int r, g, b;
-  if (hue < 85) {
-    r = 255 - hue * 3; g = hue * 3; b = 0;
-  } else if (hue < 170) {
-    hue -= 85;
-    r = 0; g = 255 - hue * 3; b = hue * 3;
-  } else {
-    hue -= 170;
-    r = hue * 3; g = 0; b = 255 - hue * 3;
-  }
-
-  analogWrite(LED_R_PIN, r);
-  analogWrite(LED_G_PIN, g);
-  analogWrite(LED_B_PIN, b);
 }

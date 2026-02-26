@@ -1,0 +1,46 @@
+#include "leds.h"
+#include "pins.h"
+#include "pitches.h"
+
+#define BLIP_DURATION 300
+
+int forceLed(int ledPin, int currentBrightness) {
+  int newBrightness = currentBrightness < 128 ? 255 : 0;
+  analogWrite(ledPin, newBrightness);
+  return newBrightness;
+}
+
+void blipLed(int ledPin, int currentBrightness) {
+  forceLed(ledPin, currentBrightness);
+  delay(BLIP_DURATION);
+  analogWrite(ledPin, currentBrightness);
+}
+
+void setRGBFromPitch(int pitch) {
+  if (pitch == REST) {
+    analogWrite(LED_R_PIN, 0);
+    analogWrite(LED_G_PIN, 0);
+    analogWrite(LED_B_PIN, 0);
+    return;
+  }
+
+  // Constrain the range to avoid glitchy colors
+  // 131Hz (C3) to 1047Hz (C6) covers most melodies
+  int hue = map(constrain(pitch, 131, 1047), 131, 1047, 0, 255);
+  
+  // Hue -> RGB
+  int r, g, b;
+  if (hue < 85) {
+    r = 255 - hue * 3; g = hue * 3; b = 0;
+  } else if (hue < 170) {
+    hue -= 85;
+    r = 0; g = 255 - hue * 3; b = hue * 3;
+  } else {
+    hue -= 170;
+    r = hue * 3; g = 0; b = 255 - hue * 3;
+  }
+
+  analogWrite(LED_R_PIN, r);
+  analogWrite(LED_G_PIN, g);
+  analogWrite(LED_B_PIN, b);
+}
