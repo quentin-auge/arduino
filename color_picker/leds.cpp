@@ -5,7 +5,7 @@
 #define BLIP_DURATION 300
 
 int forceLed(int ledPin, int currentBrightness) {
-  int newBrightness = currentBrightness < 128 ? 255 : 0;
+  int newBrightness = currentBrightness < 128 ? MAX_BRIGHTNESS : 0;
   analogWrite(ledPin, newBrightness);
   return newBrightness;
 }
@@ -26,18 +26,18 @@ void setRGBFromPitch(int pitch) {
 
   // Constrain the range to avoid glitchy colors
   // 131Hz (C3) to 1047Hz (C6) covers most melodies
-  int hue = map(constrain(pitch, 131, 1047), 131, 1047, 0, 255);
+  int hue = map(constrain(pitch, 131, 1047), 131, 1047, 0, MAX_BRIGHTNESS);
   
   // Hue -> RGB
   int r, g, b;
   if (hue < 85) {
-    r = 255 - hue * 3; g = hue * 3; b = 0;
+    r = MAX_BRIGHTNESS - hue * 3; g = hue * 3; b = 0;
   } else if (hue < 170) {
     hue -= 85;
-    r = 0; g = 255 - hue * 3; b = hue * 3;
+    r = 0; g = MAX_BRIGHTNESS - hue * 3; b = hue * 3;
   } else {
     hue -= 170;
-    r = hue * 3; g = 0; b = 255 - hue * 3;
+    r = hue * 3; g = 0; b = MAX_BRIGHTNESS - hue * 3;
   }
 
   analogWrite(LED_R_PIN, r);

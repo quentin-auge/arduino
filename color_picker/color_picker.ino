@@ -153,7 +153,7 @@ void loop() {
       rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
     }
 
-    int tunedBrightness = map(potentiometerValue, 0, 4095, 0, 255);
+    int tunedBrightness = map(potentiometerValue, 0, 4095, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
     if (rTuning) r = tunedBrightness;
     if (gTuning) g = tunedBrightness;
     if (bTuning) b = tunedBrightness;
