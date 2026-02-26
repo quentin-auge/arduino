@@ -49,16 +49,24 @@ bool bTuning = false;
 bool rBlink = false;
 unsigned long rBlinkTime = 0;
 int rBlinkBrightness;
+bool rBlinkTuning = false;
+int rBlinkInterval = 0;
 
 bool gBlink = false;
 unsigned long gBlinkTime = 0;
 int gBlinkBrightness;
+bool gBlinkTuning = false;
+int gBlinkInterval = 0;
 
 bool bBlink = false;
 unsigned long bBlinkTime = 0;
 int bBlinkBrightness;
+bool bBlinkTuning = false;
+int bBlinkInterval = 0;
 
 void loop() {
+  int potentiometerValue = 4095 - analogRead(POTENTIOMETER_PIN);
+
   // Handle back button
 
   backButton.update();
@@ -85,8 +93,7 @@ void loop() {
   if (player.isPlaying())
   {
     // Handle tempo tuning with potentiometer
-    int potentiometerValue = analogRead(POTENTIOMETER_PIN);
-    int tempo = map(4095 - potentiometerValue, 0, 4095, song.tempo / 2, song.tempo * 2);
+    int tempo = map(potentiometerValue, 0, 4095, song.tempo / 2, song.tempo * 2);
     player.setTempo(tempo);
     player.update();
     setRGBFromPitch(player.getPitch());
@@ -100,50 +107,53 @@ void loop() {
     gButton.update();
     bButton.update();
 
-    int potentiometerValue = analogRead(POTENTIOMETER_PIN);
-
     // Handle forced LEDs
 
     if (rButton.isShortPress()) {
       r = forceLed(LED_R_PIN, r);
       rTuning = false; gTuning = false; bTuning = false;
       rBlink = false;
+      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
     }
 
     if (gButton.isShortPress()) {
       g = forceLed(LED_G_PIN, g);
       rTuning = false; gTuning = false; bTuning = false;
       gBlink = false;
+      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
     }
 
     if (bButton.isShortPress()) {
       b = forceLed(LED_B_PIN, b);
       rTuning = false; gTuning = false; bTuning = false;
       bBlink = false;
+      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
     }
 
     // Handle tuned LEDs
-
-    int tunedBrightness = map(4095 - potentiometerValue, 0, 4095, 0, 255);
 
     if (rButton.isLongPress()) {
       blipLed(LED_R_PIN, r);
       rTuning = true; gTuning = false; bTuning = false;
       rBlink = false;
+      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
     }
 
     if (gButton.isLongPress()) {
       blipLed(LED_G_PIN, g);
       rTuning = false; gTuning = true; bTuning = false;
       gBlink = false;
+      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
     }
 
     if (bButton.isLongPress()) {
       blipLed(LED_B_PIN, b);
       rTuning = false; gTuning = false; bTuning = true;
       bBlink = false;
+      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = false;
     }
 
+    int tunedBrightness = map(potentiometerValue, 0, 4095, 0, 255);
     if (rTuning) r = tunedBrightness;
     if (gTuning) g = tunedBrightness;
     if (bTuning) b = tunedBrightness;
@@ -154,34 +164,42 @@ void loop() {
       rBlink = !rBlink;
       rBlinkTime = millis();
       rBlinkBrightness = r;
+      rBlinkTuning = true; gBlinkTuning = false; bBlinkTuning = false;
       rTuning = false; gTuning = false; bTuning = false;
-    }
-
-    if (rBlink && millis() - rBlinkTime > BLINK_INTERVAL) {
-      r = r == 0 ? rBlinkBrightness : 0;
-      rBlinkTime = millis();
     }
 
     if (gButton.isDoubleClick()) {
       gBlink = !gBlink;
       gBlinkTime = millis();
       gBlinkBrightness = g;
+      rBlinkTuning = false; gBlinkTuning = true; bBlinkTuning = false;
       gTuning = false; gTuning = false; bTuning = false;
-    }
-
-    if (gBlink && millis() - gBlinkTime > BLINK_INTERVAL) {
-      g = g == 0 ? gBlinkBrightness : 0;
-      gBlinkTime = millis();
     }
 
     if (bButton.isDoubleClick()) {
       bBlink = !bBlink;
       bBlinkTime = millis();
       bBlinkBrightness = b;
+      rBlinkTuning = false; gBlinkTuning = false; bBlinkTuning = true;
       bTuning = false; gTuning = false; bTuning = false;
     }
 
-    if (bBlink && millis() - bBlinkTime > BLINK_INTERVAL) {
+    int tunedBlinkInterval = map(4095 - potentiometerValue, 0, 4095, 100, 1000);
+    if (rBlinkTuning) rBlinkInterval = tunedBlinkInterval;
+    if (gBlinkTuning) gBlinkInterval = tunedBlinkInterval;
+    if (bBlinkTuning) bBlinkInterval = tunedBlinkInterval;
+
+    if (rBlink && millis() - rBlinkTime > rBlinkInterval) {
+      r = r == 0 ? rBlinkBrightness : 0;
+      rBlinkTime = millis();
+    }
+
+    if (gBlink && millis() - gBlinkTime > gBlinkInterval) {
+      g = g == 0 ? gBlinkBrightness : 0;
+      gBlinkTime = millis();
+    }
+
+    if (bBlink && millis() - bBlinkTime > bBlinkInterval) {
       b = b == 0 ? bBlinkBrightness : 0;
       bBlinkTime = millis();
     }
