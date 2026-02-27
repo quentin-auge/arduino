@@ -2,16 +2,14 @@
 
 LedController::LedController()
   : _brightnessTuning(false), _brightness(0),
-    _blink(false), _blinkTuning(false), _blinkInterval(500),
-    _blinkBrightness(0), _blinkTime(0)
+    _blink(false), _blinkTuning(false)
 {}
 
-int LedController::update(bool shortPress, bool longPress, bool multiClick, int potentiometerValue) {
+int LedController::update(bool shortPress, bool longPress, bool multiClick, int potentiometerValue, int* blinkInterval) {
   // Handle short press -> on/off
 
   if (shortPress) {
     exitTuning();
- 
     if (!_blink) {
       // Switch on/off
       _brightness = _brightness != MAX_BRIGHTNESS ? MAX_BRIGHTNESS : 0;
@@ -25,6 +23,7 @@ int LedController::update(bool shortPress, bool longPress, bool multiClick, int 
 
   if (longPress) {
     exitTuning();
+    _blink = false;
     _brightnessTuning = true;
   }
 
@@ -41,28 +40,23 @@ int LedController::update(bool shortPress, bool longPress, bool multiClick, int 
         // Blink right away
         _brightness = MAX_BRIGHTNESS;
       }
-      _blinkBrightness = _brightness;
       _blinkTuning = true;
-      _blinkTime = millis();
       _blink = true;
     } else {
-      // Stop blinking, keep same brightness
       _blink = false;
-      _brightness = _blinkBrightness;
+      _brightness = 0;
     }
   }
 
   if (_blinkTuning) {
-    _blinkInterval = map(4095 - potentiometerValue, 0, 4095, 100, 1000);
-  }
-
-  if (_blink && millis() - _blinkTime > _blinkInterval) {
-    _brightness = (_brightness == 0) ? _blinkBrightness : 0;
-    _blinkTime = millis();
+    // Set externally so it applies to all LEDs at once
+    *blinkInterval = map(4095 - potentiometerValue, 0, 4095, 100, 1000);
   }
 
   return _brightness;
 }
+
+bool LedController::mustBlink() const { return _blink; }
 
 void LedController::exitTuning() {
   _brightnessTuning = false;

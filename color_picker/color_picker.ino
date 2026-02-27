@@ -8,6 +8,7 @@
 Button rButton(BUTTON_R_PIN);
 Button gButton(BUTTON_G_PIN);
 Button bButton(BUTTON_B_PIN);
+
 LedController rLed;
 LedController gLed;
 LedController bLed;
@@ -40,6 +41,10 @@ int song_idx = 0;
 Song song = ALL_SONGS[song_idx];
 
 bool wasPlaying = false;
+
+int blinkInterval = 0;
+bool blinkPhase = false;  // false = off, true = on
+int blinkTime = 0;
 
 void loop() {
   int potentiometerValue = 4095 - analogRead(POTENTIOMETER_PIN);
@@ -84,16 +89,28 @@ void loop() {
     gButton.update();
     bButton.update();
 
-    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isMultiClick(), potentiometerValue);
+    // Handle LEDs state; blinkInterval set by single controlling LED if necessary
+    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isMultiClick(), potentiometerValue, &blinkInterval);
+    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isMultiClick(), potentiometerValue, &blinkInterval);
+    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isMultiClick(), potentiometerValue, &blinkInterval);
+
+    // Handle all LEDs blinking, synchronized
+    if (millis() - blinkTime > blinkInterval) {
+      blinkPhase = !blinkPhase;
+      blinkTime = millis();
+    }
+
+    // Blink LEDs
+    if (rLed.mustBlink()) rBrightness = blinkPhase ? rBrightness : 0;
+    if (gLed.mustBlink()) gBrightness = blinkPhase ? gBrightness : 0;
+    if (bLed.mustBlink()) bBrightness = blinkPhase ? bBrightness : 0;
+    
+    // Light LEDs
     analogWrite(LED_R_PIN, rBrightness);
-    
-    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isMultiClick(), potentiometerValue);
     analogWrite(LED_G_PIN, gBrightness);
-    
-    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isMultiClick(), potentiometerValue);
     analogWrite(LED_B_PIN, bBrightness);
 
-    // When one led takes over tuning, clear the others
+    // When one LED takes over tuning, clear the others
     if (rButton.isShortPress(), rButton.isLongPress() || rButton.isMultiClick()) {
       gLed.exitTuning(); bLed.exitTuning();
     }
