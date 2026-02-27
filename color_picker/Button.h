@@ -16,6 +16,7 @@ public:
   bool isShortPress()  const;
   bool isLongPress()   const;
   bool isDoubleClick() const;
+  bool isTripleClick() const;
   bool isMultiClick()  const;
   bool isReleased()    const;
 
@@ -38,5 +39,6 @@ private:
   bool _shortPress;
   bool _longPress;
   bool _doubleClick;
+  bool _tripleClick;
   bool _multiClick;
 };

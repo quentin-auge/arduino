@@ -42,8 +42,10 @@ Song song = ALL_SONGS[song_idx];
 
 bool wasPlaying = false;
 
-int blinkInterval = 0;
-bool blinkPhase = false;  // false = off, true = on
+int blinkInterval = 500;
+int fadeInterval = 64;
+
+float blinkPhase = 0.0;  // 0.0 = off, 1.0 = on
 int blinkTime = 0;
 
 void loop() {
@@ -90,21 +92,41 @@ void loop() {
     bButton.update();
 
     // Handle LEDs state; blinkInterval set by single controlling LED if necessary
-    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isMultiClick(), potentiometerValue, &blinkInterval);
-    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isMultiClick(), potentiometerValue, &blinkInterval);
-    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isMultiClick(), potentiometerValue, &blinkInterval);
+    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isDoubleClick(), rButton.isTripleClick(),
+                                  potentiometerValue, &blinkInterval, &fadeInterval);
+    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isDoubleClick(), gButton.isTripleClick(),
+                                  potentiometerValue, &blinkInterval, &fadeInterval);
+    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isDoubleClick(), bButton.isTripleClick(),
+                                  potentiometerValue, &blinkInterval, &fadeInterval);
 
-    // Handle all LEDs blinking, synchronized
-    if (millis() - blinkTime > blinkInterval) {
-      blinkPhase = !blinkPhase;
-      blinkTime = millis();
-    }
+    // Handle LEDs blinking
 
-    // Blink LEDs
-    if (rLed.mustBlink()) rBrightness = blinkPhase ? rBrightness : 0;
-    if (gLed.mustBlink()) gBrightness = blinkPhase ? gBrightness : 0;
-    if (bLed.mustBlink()) bBrightness = blinkPhase ? bBrightness : 0;
+    float speed = 1000.0 / blinkInterval; // Frequency in Hz (cycles per second)
+    float sharpness = fadeInterval / 10.;  // 1.0 = smooth sine, more = sharper
+
+    unsigned long now = millis();
+    float deltaTime = (now - blinkTime) / 1000.0;
+    blinkTime = now;
+
+    // 1. Update phase (fixed frequency)
+    blinkPhase += 2.0 * PI * speed * deltaTime;
+    if (blinkPhase > 2.0 * PI) blinkPhase -= 2.0 * PI;
+
+    // 2. The "Stretched & Clamped" Formula
+    // We center the sine at 0 (-1 to 1), multiply by sharpness,
+    // then shift it back and constrain it.
+    float rawSine = sin(blinkPhase);
+    float stretched = rawSine * sharpness;
     
+    // Constrain to -1.0 to 1.0, then map to 0-255
+    float clamped = constrain(stretched, -1.0, 1.0);
+    int finalBrightness = (clamped + 1.0) * 127.5;
+
+    // 4. Assign to your LEDs
+    if (rLed.mustBlink()) rBrightness = finalBrightness;
+    if (gLed.mustBlink()) gBrightness = finalBrightness;
+    if (bLed.mustBlink()) bBrightness = finalBrightness;
+
     // Light LEDs
     analogWrite(LED_R_PIN, rBrightness);
     analogWrite(LED_G_PIN, gBrightness);
