@@ -6,8 +6,8 @@
 class LedController {
 public:
   LedController();
-  int update(bool shortPress, bool longPress, bool doubleClick, bool tripleClick,
-             int potentiometerValue, int* blinkInterval, int* fadeInterval);
+  int update(bool shortPress, bool longPress, bool multiClick,
+             int potentiometerValue, int* blinkInterval, int* fadeSharpness);
   bool mustBlink() const;
   void exitTuning();
 

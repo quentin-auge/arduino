@@ -42,8 +42,8 @@ Song song = ALL_SONGS[song_idx];
 
 bool wasPlaying = false;
 
-int blinkInterval = 500;
-int fadeInterval = 64;
+int blinkInterval = 0;
+int fadeSharpness = 0;
 
 float blinkPhase = 0.0;  // 0.0 = off, 1.0 = on
 int blinkTime = 0;
@@ -91,18 +91,24 @@ void loop() {
     gButton.update();
     bButton.update();
 
+    // (Re)initialize blinking parameters when no LED blinks
+    if (!rLed.mustBlink() && !gLed.mustBlink() && !bLed.mustBlink()) {
+      blinkInterval = 500;
+      fadeSharpness = 128;
+    }
+
     // Handle LEDs state; blinkInterval set by single controlling LED if necessary
-    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isDoubleClick(), rButton.isTripleClick(),
-                                  potentiometerValue, &blinkInterval, &fadeInterval);
-    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isDoubleClick(), gButton.isTripleClick(),
-                                  potentiometerValue, &blinkInterval, &fadeInterval);
-    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isDoubleClick(), bButton.isTripleClick(),
-                                  potentiometerValue, &blinkInterval, &fadeInterval);
+    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isMultiClick(),
+                                  potentiometerValue, &blinkInterval, &fadeSharpness);
+    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isMultiClick(),
+                                  potentiometerValue, &blinkInterval, &fadeSharpness);
+    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isMultiClick(),
+                                  potentiometerValue, &blinkInterval, &fadeSharpness);
 
     // Handle LEDs blinking
 
     float speed = 1000.0 / blinkInterval; // Frequency in Hz (cycles per second)
-    float sharpness = fadeInterval / 10.;  // 1.0 = smooth sine, more = sharper
+    float sharpness = fadeSharpness / 10.;  // 1.0 = smooth sine, more = sharper
 
     unsigned long now = millis();
     float deltaTime = (now - blinkTime) / 1000.0;

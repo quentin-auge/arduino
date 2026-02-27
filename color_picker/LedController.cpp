@@ -5,8 +5,8 @@ LedController::LedController()
     _blink(false), _blinkTuning(false), _fadeTuning(false)
 {}
 
-int LedController::update(bool shortPress, bool longPress, bool doubleClick, bool tripleClick,
-                          int potentiometerValue, int* blinkInterval, int* fadeInterval) {
+int LedController::update(bool shortPress, bool longPress, bool multiClick,
+                          int potentiometerValue, int* blinkInterval, int* fadeSharpness) {
   // Handle short press -> on/off
 
   if (shortPress) {
@@ -20,9 +20,9 @@ int LedController::update(bool shortPress, bool longPress, bool doubleClick, boo
     }
   }
 
-  // Handle long press -> brightness tuning
+  // Handle long press when not blinking -> brightness tuning
 
-  if (longPress) {
+  if (longPress && !_blink) {
     if (!_brightnessTuning) {
       exitTuning();
       _blink = false;
@@ -39,7 +39,7 @@ int LedController::update(bool shortPress, bool longPress, bool doubleClick, boo
 
   // Handle multi-click -> blink
 
-  if (doubleClick || tripleClick) {
+  if (multiClick) {
     exitTuning();
     if (!_blink) {
       if (_brightness == 0) {
@@ -47,14 +47,23 @@ int LedController::update(bool shortPress, bool longPress, bool doubleClick, boo
         _brightness = MAX_BRIGHTNESS;
       }
       _blink = true;
+      _blinkTuning = true;
+    } else {
+      _blink = false;
+      _brightness = 0;
     }
   }
 
-  // Handle double click -> blink tuning
+  // Handle long press when blinking -> blink/fade tuning
 
-  if (doubleClick) {
-      exitTuning();
-      _blinkTuning = true;
+  if (longPress && _blink) {
+      if (!_blinkTuning) {
+        exitTuning();
+        _blinkTuning = true;
+      } else {
+        exitTuning();
+        _fadeTuning = true;
+      }
   }
 
   if (_blinkTuning) {
@@ -62,16 +71,11 @@ int LedController::update(bool shortPress, bool longPress, bool doubleClick, boo
     *blinkInterval = map(4095 - potentiometerValue, 0, 4095, 200, 2000);
   }
 
-  // Handle triple click -> blink tuning
-  if (tripleClick) {
-      exitTuning();
-      _fadeTuning = true;
-  }
-
   if (_fadeTuning) {
-    *fadeInterval = map(4095 - potentiometerValue, 0, 4095, 8, 18);
-    if (*fadeInterval > 17) {
-      *fadeInterval = 64;
+    *fadeSharpness = map(potentiometerValue, 0, 4095, 8, 20);
+    if (*fadeSharpness > 18) {
+      // Force full blink at end of potentiometer course
+      *fadeSharpness = 128;
     }
   }
 
