@@ -126,12 +126,12 @@ void loop() {
     
     // Constrain to -1.0 to 1.0, then map to 0-255
     float clamped = constrain(stretched, -1.0, 1.0);
-    int finalBrightness = (clamped + 1.0) * 127.5;
+    float fadedBlinkPhase = (clamped + 1.0) / 2;
 
     // 4. Assign to your LEDs
-    if (rLed.mustBlink()) rBrightness = finalBrightness;
-    if (gLed.mustBlink()) gBrightness = finalBrightness;
-    if (bLed.mustBlink()) bBrightness = finalBrightness;
+    if (rLed.mustBlink()) rBrightness *= fadedBlinkPhase;
+    if (gLed.mustBlink()) gBrightness *= fadedBlinkPhase;
+    if (bLed.mustBlink()) bBrightness *= fadedBlinkPhase;
 
     // Light LEDs
     analogWrite(LED_R_PIN, rBrightness);
