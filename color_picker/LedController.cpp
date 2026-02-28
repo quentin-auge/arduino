@@ -1,91 +1,74 @@
 #include "LedController.h"
 
 LedController::LedController()
-  : _brightnessTuning(false), _brightness(0),
-    _blink(false), _blinkTuning(false), _fadeTuning(false)
+  : _on(false), _brightnessTuning(false), _tunedBrightness(MAX_BRIGHTNESS / 2),
+    _blink(false), _blinkInterval(0), _blinkSharpness(0),
+    _blinkPhase(0), _blinkTime(0)
 {}
 
-int LedController::update(bool shortPress, bool longPress, bool multiClick,
-                          int potentiometerValue, int* blinkInterval, int* fadeSharpness) {
-  // Handle short press -> on/off
+int LedController::update(int potentiometerValue, int* tunedBrightness) {
+  int brightness = 0;
 
-  if (shortPress) {
-    exitTuning();
-    if (!_blink) {
-      // Switch on/off
-      _brightness = _brightness != MAX_BRIGHTNESS ? MAX_BRIGHTNESS : 0;
-    } else {
-      _blink = false;
-      _brightness = MAX_BRIGHTNESS;
+  if (_on && !_blink) {
+    if (_brightnessTuning) {
+      *tunedBrightness = map(potentiometerValue, 0, 4095, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
     }
+    brightness = *tunedBrightness;
   }
+  
+  if (_on && _blink) {
+    // Tune blinking
 
-  // Handle long press when not blinking -> brightness tuning
-
-  if (longPress && !_blink) {
-    if (!_brightnessTuning) {
-      exitTuning();
-      _blink = false;
-      _brightnessTuning = true;
-    } else {
-      exitTuning();
-      _brightness = 0;
-    }
-  }
-
-  if (_brightnessTuning) {
-    _brightness = map(potentiometerValue, 0, 4095, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
-  }
-
-  // Handle multi-click -> blink
-
-  if (multiClick) {
-    exitTuning();
-    if (!_blink) {
-      if (_brightness == 0) {
-        // Blink right away
-        _brightness = MAX_BRIGHTNESS;
-      }
-      _blink = true;
-      _blinkTuning = true;
-    } else {
-      _blink = false;
-      _brightness = 0;
-    }
-  }
-
-  // Handle long press when blinking -> blink/fade tuning
-
-  if (longPress && _blink) {
-      if (!_blinkTuning) {
-        exitTuning();
-        _blinkTuning = true;
-      } else {
-        exitTuning();
-        _fadeTuning = true;
-      }
-  }
-
-  if (_blinkTuning) {
-    // Set externally so it applies to all LEDs at once
-    *blinkInterval = map(4095 - potentiometerValue, 0, 4095, 200, 2000);
-  }
-
-  if (_fadeTuning) {
-    *fadeSharpness = map(potentiometerValue, 0, 4095, 8, 20);
-    if (*fadeSharpness > 18) {
+    _blinkInterval = map(4095 - potentiometerValue, 0, 4095, 200, 2000);
+    _blinkSharpness = map(potentiometerValue, 0, 4095, 11, 20);
+    if (_blinkSharpness > 18) {
       // Force full blink at end of potentiometer course
-      *fadeSharpness = 128;
+      _blinkSharpness = 128;
     }
+
+    // Blink
+
+    float speed = 1000.0 / _blinkInterval; // Frequency in Hz (cycles per second)
+    float sharpness = _blinkSharpness / 10.;  // 1.0 = smooth sine, more = sharper
+
+    unsigned long now = millis();
+    float deltaTime = (now - _blinkTime) / 1000.0;
+    _blinkTime = now;
+
+    // 1. Update phase (fixed frequency)
+    _blinkPhase += 2.0 * PI * speed * deltaTime;
+    if (_blinkPhase > 2.0 * PI) _blinkPhase -= 2.0 * PI;
+
+    // 2. The "Stretched & Clamped" Formula
+    // We center the sine at 0 (-1 to 1), multiply by sharpness,
+    // then shift it back and constrain it.
+    float rawSine = sin(_blinkPhase);
+    float stretched = rawSine * sharpness;
+    
+    // Constrain to -1.0 to 1.0, then map to 0-1
+    float clamped = constrain(stretched, -1.0, 1.0);
+    float fadedBlinkPhase = (clamped + 1.0) / 2;
+
+    // 4. Apply
+    brightness = *tunedBrightness * fadedBlinkPhase;
   }
 
-  return _brightness;
+  return brightness;
 }
 
-bool LedController::mustBlink() const { return _blink; }
-
-void LedController::exitTuning() {
-  _brightnessTuning = false;
-  _blinkTuning      = false;
-  _fadeTuning       = false;
+void LedController::syncBlink(unsigned long blinkTime) {
+  _blinkTime  = blinkTime;
+  _blinkPhase = 0.0f;
 }
+
+bool LedController::isOn() const { return _on; }
+bool LedController::isBlinking() const { return _blink; }
+
+void LedController::turnOn() { _on = true; }
+void LedController::turnOff() { _on = false; }
+void LedController::toggleOnOff() { _on = !_on; }
+
+void LedController::brightnessTuningOn() { _brightnessTuning = true; }
+void LedController::brightnessTuningOff() { _brightnessTuning = false; }
+
+void LedController::toggleBlinking() { _blink = !_blink; }

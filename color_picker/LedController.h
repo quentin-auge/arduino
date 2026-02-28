@@ -6,17 +6,31 @@
 class LedController {
 public:
   LedController();
-  int update(bool shortPress, bool longPress, bool multiClick,
-             int potentiometerValue, int* blinkInterval, int* fadeSharpness);
-  bool mustBlink() const;
-  void exitTuning();
+  int update(int potentiometerValue, int* tunedBrightness);
+
+  void syncBlink(unsigned long t);
+
+  bool isOn() const;
+  bool isBlinking() const;
+
+  void turnOn();
+  void turnOff();
+  void toggleOnOff();
+
+  void brightnessTuningOn();
+  void brightnessTuningOff();
+
+  void toggleBlinking();
 
 private:
+  bool _on;
+
   bool _brightnessTuning;
-  int  _brightness;
+  int _tunedBrightness;
 
   bool _blink;
-  bool _blinkTuning;
-
-  bool _fadeTuning;
+  int _blinkInterval;
+  int _blinkSharpness;
+  float _blinkPhase;
+  unsigned long _blinkTime;
 };

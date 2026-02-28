@@ -42,11 +42,7 @@ Song song = ALL_SONGS[song_idx];
 
 bool wasPlaying = false;
 
-int blinkInterval = 0;
-int fadeSharpness = 0;
-
-float blinkPhase = 0.0;  // 0.0 = off, 1.0 = on
-int blinkTime = 0;
+int tunedBrightness = MAX_BRIGHTNESS / 2;
 
 void loop() {
   int potentiometerValue = 4095 - analogRead(POTENTIOMETER_PIN);
@@ -86,67 +82,53 @@ void loop() {
   if (!player.isPlaying())
   {
     // Handled RGB LEDs / buttons
-
     rButton.update();
     gButton.update();
     bButton.update();
 
-    // (Re)initialize blinking parameters when no LED blinks
-    if (!rLed.mustBlink() && !gLed.mustBlink() && !bLed.mustBlink()) {
-      blinkInterval = 500;
-      fadeSharpness = 128;
+    // No LED blinking -> brightness tuning
+    if (!rLed.isBlinking() && !gLed.isBlinking() && !bLed.isBlinking()) {
+      rLed.brightnessTuningOn();
+      gLed.brightnessTuningOn();
+      bLed.brightnessTuningOn();
     }
 
-    // Handle LEDs state; blinkInterval set by single controlling LED if necessary
-    int rBrightness = rLed.update(rButton.isShortPress(), rButton.isLongPress(), rButton.isMultiClick(),
-                                  potentiometerValue, &blinkInterval, &fadeSharpness);
-    int gBrightness = gLed.update(gButton.isShortPress(), gButton.isLongPress(), gButton.isMultiClick(),
-                                  potentiometerValue, &blinkInterval, &fadeSharpness);
-    int bBrightness = bLed.update(bButton.isShortPress(), bButton.isLongPress(), bButton.isMultiClick(),
-                                  potentiometerValue, &blinkInterval, &fadeSharpness);
+    // Button press -> on/off
+    if (rButton.isShortPress() && !rLed.isBlinking()) { rLed.toggleOnOff(); }
+    if (gButton.isShortPress() && !gLed.isBlinking()) { gLed.toggleOnOff(); }
+    if (bButton.isShortPress() && !bLed.isBlinking()) { bLed.toggleOnOff(); }
 
-    // Handle LEDs blinking
+    // Multi-click -> blinking on/off
+    if (rButton.isMultiClick()) { rLed.turnOn(); rLed.toggleBlinking(); }
+    if (gButton.isMultiClick()) { gLed.turnOn(); gLed.toggleBlinking(); }
+    if (bButton.isMultiClick()) { bLed.turnOn(); bLed.toggleBlinking(); }
 
-    float speed = 1000.0 / blinkInterval; // Frequency in Hz (cycles per second)
-    float sharpness = fadeSharpness / 10.;  // 1.0 = smooth sine, more = sharper
+    if (rButton.isMultiClick() || gButton.isMultiClick() || bButton.isMultiClick()) {
+      // Entering/exiting blinking -> disable brightness tuning for all LEDs
+      rLed.brightnessTuningOff();
+      gLed.brightnessTuningOff();
+      bLed.brightnessTuningOff();
 
-    unsigned long now = millis();
-    float deltaTime = (now - blinkTime) / 1000.0;
-    blinkTime = now;
+      // Synchronize blinking clock between LEDs
+      unsigned long syncTime = millis();
+      rLed.syncBlink(syncTime);
+      gLed.syncBlink(syncTime);
+      bLed.syncBlink(syncTime);
+    }
 
-    // 1. Update phase (fixed frequency)
-    blinkPhase += 2.0 * PI * speed * deltaTime;
-    if (blinkPhase > 2.0 * PI) blinkPhase -= 2.0 * PI;
+    // Button press when blinking -> off
+    if (rButton.isShortPress() && rLed.isBlinking()) { rLed.toggleBlinking(); rLed.turnOff(); }
+    if (gButton.isShortPress() && gLed.isBlinking()) { gLed.toggleBlinking(); gLed.turnOff(); }
+    if (bButton.isShortPress() && bLed.isBlinking()) { bLed.toggleBlinking(); bLed.turnOff(); }
 
-    // 2. The "Stretched & Clamped" Formula
-    // We center the sine at 0 (-1 to 1), multiply by sharpness,
-    // then shift it back and constrain it.
-    float rawSine = sin(blinkPhase);
-    float stretched = rawSine * sharpness;
-    
-    // Constrain to -1.0 to 1.0, then map to 0-255
-    float clamped = constrain(stretched, -1.0, 1.0);
-    float fadedBlinkPhase = (clamped + 1.0) / 2;
-
-    // 4. Assign to your LEDs
-    if (rLed.mustBlink()) rBrightness *= fadedBlinkPhase;
-    if (gLed.mustBlink()) gBrightness *= fadedBlinkPhase;
-    if (bLed.mustBlink()) bBrightness *= fadedBlinkPhase;
+    // Update LEDs brightness
+    int rBrightness = rLed.update(potentiometerValue, &tunedBrightness);
+    int gBrightness = gLed.update(potentiometerValue, &tunedBrightness);
+    int bBrightness = bLed.update(potentiometerValue, &tunedBrightness);
 
     // Light LEDs
     analogWrite(LED_R_PIN, rBrightness);
     analogWrite(LED_G_PIN, gBrightness);
     analogWrite(LED_B_PIN, bBrightness);
-
-    // When one LED takes over tuning, clear the others
-    if (rButton.isShortPress(), rButton.isLongPress() || rButton.isMultiClick()) {
-      gLed.exitTuning(); bLed.exitTuning();
-    }
-    if (gButton.isShortPress() || gButton.isLongPress() || gButton.isMultiClick()) {
-      rLed.exitTuning(); bLed.exitTuning();
-    }
-    if (bButton.isShortPress() || bButton.isLongPress() || bButton.isMultiClick()) {
-      rLed.exitTuning(); gLed.exitTuning();
-    }
   }
 }
