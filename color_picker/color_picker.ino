@@ -94,9 +94,9 @@ void loop() {
     }
 
     // Button press -> on/off
-    if (rButton.isShortPress() && !rLed.isBlinking()) { rLed.toggleOnOff(); }
-    if (gButton.isShortPress() && !gLed.isBlinking()) { gLed.toggleOnOff(); }
-    if (bButton.isShortPress() && !bLed.isBlinking()) { bLed.toggleOnOff(); }
+    if (rButton.isPressed() && !rLed.isBlinking()) { rLed.toggleOnOff(); }
+    if (gButton.isPressed() && !gLed.isBlinking()) { gLed.toggleOnOff(); }
+    if (bButton.isPressed() && !bLed.isBlinking()) { bLed.toggleOnOff(); }
 
     // Multi-click -> blinking on/off
     if (rButton.isMultiClick()) { rLed.turnOn(); rLed.toggleBlinking(); }
